@@ -24,10 +24,10 @@ const register = async (req, res, next) => {
         }
     
         const newUser = await User.create({name, phone, email, password, role})
-
-        const payload = { email: newUser.email, id: newUser._id, role: newUser.role };
+        
+        const payload = { email: newUser.email, role: newUser.role };
         const accessToken = jwt.sign(payload, config.accessTokenSecret, {expiresIn : '1d'});
-
+        
         newUser.token = accessToken;
         await newUser.save();
 
@@ -47,7 +47,7 @@ const login = async (req, res, next) => {
 
     try {
         
-        const { email, password } = req.body;
+        const { email, password, token } = req.body;
 
         if(!email || !password) {
             const error = createHttpError(400, "All fields are required!");
@@ -60,11 +60,12 @@ const login = async (req, res, next) => {
             return next(error);
         }
 
-        const isMatch = await bcrypt.compare(password, isUserPresent.password);
-        if(!isMatch){
+        const isPassMatch = await bcrypt.compare(password, isUserPresent.password);
+        if(!isPassMatch){
             const error = createHttpError(401, "Invalid Credentials");
             return next(error);
         }
+        
 
         const accessToken = jwt.sign({_id: isUserPresent._id}, config.accessTokenSecret, {
             expiresIn : '1d'
@@ -86,6 +87,15 @@ const login = async (req, res, next) => {
         next(error);
     }
 
+}
+
+const getUsers = async (req, res, next) => {
+    try {
+        const users = await User.find()
+        res.status(200).json(users)
+    } catch (error) {
+        next(error)
+    }
 }
 
 const getUserData = async (req, res, next) => {
@@ -134,4 +144,4 @@ const logout = async (req, res, next) => {
 
 
 
-module.exports = { register, login, getUserData, logout, updateUserData, deleteUserData }
+module.exports = { register, login, getUserData, logout, updateUserData, deleteUserData, getUsers }
